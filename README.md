@@ -1,61 +1,96 @@
-# news-intelligence-agent
+# News Intelligence Agent
 
-A continuous political news ingestion agent that collects data from across the web at regular intervals, stores it without duplication, and generates a single, neutral intelligence report on demand.
+[![Project Status: Active](https://img.shields.io/badge/status-active-success.svg)](https://github.com/barancanercan/news-intelligence-agent)
 
-## Overview
+Sürekli ve otonom bir şekilde politik haberleri toplayan, işleyen ve talep üzerine yapılandırılmış istihbarat raporları sunan bir veri toplama ve işleme sistemi.
 
-`news-intelligence-agent` is designed as a **background ingestion system**, not a chatbot or real-time analyst.  
-It continuously gathers political news every 3 hours, preserves raw textual content, and produces structured summaries **only when explicitly requested by a human**.
+## Projeye Genel Bakış
 
-The system prioritizes coverage and signal collection over interpretation, verification, or opinion.
+`news-intelligence-agent`, bir sohbet robotu veya anlık analist değildir. Arka planda çalışan, belirlenen zaman aralıklarında web'deki politik haberleri toplayan, veriyi tekilleştirerek depolayan ve yalnızca bir insan tarafından talep edildiğinde analiz edilebilir çıktılar üreten bir **veri toplama sistemidir**.
 
-## Core Principles
+Sistem, yorumlama, doğrulama veya fikir beyan etme yerine, ham verinin kapsamlı ve sinyal odaklı bir şekilde toplanmasına öncelik verir.
 
-- Continuous collection, on-demand reasoning
-- Neutral, broadcast-style reporting
-- Importance-first, frequency-aware prioritization
-- No interpretation, no opinion, no conclusions
-- Raw data preservation for downstream systems
+## Temel Özellikler
 
-## What This Agent Does
+- **Geniş Kapsamlı Veri Toplama:** Onlarca farklı ve spesifik anahtar kelime (partiler, liderler, kurumlar vb.) üzerinden Google News RSS beslemelerini tarar.
+- **Otomatik Kategorizasyon:** Her haberi, hangi arama sorgusu kategorisinden (örn: "Siyasi Partiler", "Ana Kurumlar ve Yönetim") geldiğine göre otomatik olarak etiketler. Bu, verinin daha sonra kolayca filtrelenmesini ve analiz edilmesini sağlar.
+- **Zaman Filtreleme:** Yalnızca belirlenen zaman aralığındaki (örn. "son 24 saat") haberleri işleme alır.
+- **Veri Tekilleştirme:** Aynı haberin farklı arama sorgularından tekrar gelmesini engelleyerek veritabanı bütünlüğünü korur.
+- **Yapısal Depolama:** Toplanan ham haberleri (başlık, URL, kategori, yayınlanma tarihi) SQLite veritabanında, SQLAlchemy ORM aracılığıyla yapısal bir formatta saklar.
+- **Kolay Kurulum ve Kullanım:** `requirements.txt` ile bağımlılık yönetimi ve basit Python betikleri ile kolayca çalıştırılabilir.
+- **Esnek Yapılandırma:** `collector/fetch.py` içerisindeki `CATEGORIZED_QUERIES` sözlüğü, toplanacak haberlerin konularını ve kategorilerini kolayca özelleştirme imkanı sunar.
 
-- Collects political news from across the web every 3 hours
-- Prevents duplicate data ingestion
-- Stores raw news content in a structured database
-- Generates a **single unified intelligence report** when requested
-- Ranks news by quantitative importance signals (frequency, spread, recency)
+## Mimarisi ve Çalışma Prensibi
 
-## What This Agent Does NOT Do
+Sistem, basit ve modüler bir boru hattı (pipeline) mimarisi üzerine kurulmuştur:
 
-- Does not verify factual correctness
-- Does not evaluate source credibility
-- Does not restrict collection to predefined publishers
-- Does not interpret events or infer intent
-- Does not generate opinions or analytical conclusions
-- Does not autonomously trigger summaries or actions
+1.  **`Collector` (Toplayıcı - `collector/fetch.py`)**
+    -   Önceden tanımlanmış ve kategorilere ayrılmış sorgu listesindeki her bir anahtar kelime için Google News RSS beslemelerine istek atar.
+    -   Gelen haberleri `published_at` (yayınlanma tarihi) bilgisine göre filtreler.
+    -   Daha önce işlenmemiş yeni haberleri, geldiği sorgunun **kategorisiyle etiketleyerek** bir sonraki aşamaya aktarır.
 
-## Output Behavior
+2.  **`Storage` (Depolama - `storage/`)**
+    -   `models.py`: `NewsArticle` adlı SQLAlchemy modelini tanımlar. Bu model, haberin kategorisini saklamak için bir `category` kolonu içerir.
+    -   `session.py`: Proje ana dizininde `news.db` adlı bir SQLite veritabanı dosyası oluşturur ve veritabanı oturumlarını yönetir.
+    -   Toplayıcıdan gelen filtrelenmiş ve etiketlenmiş haberler, bu katman aracılığıyla veritabanına kaydedilir.
 
-When asked for a summary, the agent produces:
+3.  **`Scripts` (Yardımcı Betikler - `scripts/`)**
+    -   `export_to_csv.py`: Veritabanındaki tüm veriyi, kategori bilgisiyle birlikte analiz ve inceleme için `news_report_categorized.csv` dosyasına aktarır.
 
-- One unified report
-- Neutral, news-anchor style language
-- Importance-ranked coverage
-- Focus on *what happened*, not *why it happened*
+## Kurulum ve Başlangıç
 
-## Intended Use Cases
+Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
 
-- Feeding political intelligence systems
-- Supporting fine-tuning and dataset creation
-- Acting as an upstream signal source for RAG pipelines
-- Providing raw, structured context for downstream analysis
+### 1. Projeyi Klonlayın
 
-## Project Status
+```bash
+git clone https://github.com/barancanercan/news-intelligence-agent.git
+cd news-intelligence-agent
+```
 
-This repository currently focuses on architectural clarity and system design.  
-Implementation details are developed incrementally with an emphasis on correctness, simplicity, and extensibility.
+### 2. Sanal Ortam (Virtual Environment) Oluşturun (Önerilir)
 
----
+```bash
+# Sanal ortamı oluştur
+python3 -m venv .venv
 
-Jarvis is the internal ingestion agent powering this system.
+# Sanal ortamı aktif et (Linux/macOS)
+source .venv/bin/activate
+```
 
+### 3. Bağımlılıkları Yükleyin
+
+```bash
+pip install -r requirements.txt
+```
+
+## Kullanım
+
+Kurulum tamamlandıktan sonra, aşağıdaki betikleri çalıştırarak sistemi kullanabilirsiniz.
+
+### 1. Haberleri Toplama ve Kategorize Etme
+
+Aşağıdaki komut, `collector/fetch.py` betiğini çalıştırır. Bu betik, yapılandırılmış sorgu listesini kullanarak son 24 saatteki haberleri toplar, kategorize eder ve `news.db` veritabanına kaydeder.
+
+*Not: Betik, her çalıştırmada eski `news.db` dosyasını otomatik olarak silerek temiz bir başlangıç yapar.*
+
+```bash
+python collector/fetch.py
+```
+
+### 2. Veriyi İnceleme (CSV Olarak)
+
+Toplanan ve kategorize edilen verileri daha kolay incelemek için aşağıdaki komutu çalıştırın. Bu komut, veritabanındaki tüm haberleri `news_report_categorized.csv` adlı bir dosyaya aktarır.
+
+```bash
+python scripts/export_to_csv.py
+```
+Oluşturulan `news_report_categorized.csv` dosyasını bir e-tablo programı ile açtığınızda, her haberin başında bir `category` sütunu göreceksiniz.
+
+## Yapılandırma (Konfigürasyon)
+
+Haber toplama işleminin kapsamını ve kategorilerini değiştirmek çok kolaydır. `collector/fetch.py` dosyasını açın ve `CATEGORIZED_QUERIES` sözlüğünü kendi ihtiyaçlarınıza göre düzenleyin. Yeni kategoriler veya anahtar kelimeler ekleyerek sistemin daha farklı alanlardan haber toplamasını sağlayabilirsiniz.
+
+## Proje Durumu
+
+Bu proje aktif olarak geliştirilmektedir. Mevcut odak, veri toplama (`collector`) ve depolama (`storage`) katmanlarının sağlamlaştırılmasıdır. Gelecek adımlar arasında ham metin ayrıştırma (`parser`), haber önem sıralaması (`ranker`) ve özet raporlama (`reporting`) modüllerinin geliştirilmesi bulunmaktadır.
